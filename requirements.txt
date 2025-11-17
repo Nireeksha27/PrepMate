@@ -1,0 +1,5 @@
+streamlit
+google-cloud-firestore
+jinja2
+pdfkit
+google-cloud-storage
