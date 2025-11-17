@@ -35,13 +35,31 @@ def update_session_answers(
 ) -> None:
     """Update session with answers and final output."""
     try:
-        _client().collection("prep_sessions").document(session_id).update(
-            {
-                "followup_data.answers": answers,
-                "final_output_html": final_html,
-                "pdf_url": pdf_url,
-            }
-        )
+        doc_ref = _client().collection("prep_sessions").document(session_id)
+        doc = doc_ref.get()
+        
+        if doc.exists:
+            # Document exists, update it
+            doc_ref.update(
+                {
+                    "followup_data.answers": answers,
+                    "final_output_html": final_html,
+                    "pdf_url": pdf_url,
+                }
+            )
+        else:
+            # Document doesn't exist, create it with minimal data
+            logging.warning(f"Session {session_id} not found, creating new document")
+            doc_ref.set(
+                {
+                    "id": session_id,
+                    "followup_data": {"answers": answers},
+                    "final_output_html": final_html,
+                    "pdf_url": pdf_url,
+                    "consentToStore": True,
+                },
+                merge=True
+            )
     except Exception as exc:  # pragma: no cover
         logging.warning("Failed to update Firestore session: %s", exc)
 
