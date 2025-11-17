@@ -1,0 +1,38 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Doctor Appointment Prep Sheet</title>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 24px; color: #111; }
+      h1 { font-size: 22px; margin-bottom: 0; }
+      h2 { font-size: 18px; margin-top: 24px; }
+      ul { padding-left: 18px; }
+      .disclaimer { font-size: 12px; color: #666; margin-top: 16px; }
+    </style>
+  </head>
+  <body>
+    <h1>Doctor Appointment Prep Sheet</h1>
+    <p class="disclaimer">This is a communication aid, not medical advice.</p>
+    <h2>Patient Info</h2>
+    <ul>
+      {% for label, value in patient_info.items() if value %}
+      <li><strong>{{ label.replace('_', ' ').title() }}:</strong> {{ value }}</li>
+      {% endfor %}
+    </ul>
+    <h2>Symptom Summary</h2>
+    <p>{{ summary }}</p>
+    <h2>Doctor Questionnaire</h2>
+    <ul>
+      {% for item in questions %}
+      <li>{{ item }}</li>
+      {% endfor %}
+    </ul>
+    <h2>Conversation Starter</h2>
+    <p>{{ starter }}</p>
+    <h2>Safety Reminder</h2>
+    <p>{{ safety }}</p>
+  </body>
+</html>
+
+
