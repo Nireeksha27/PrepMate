@@ -4,13 +4,14 @@ PrepMate is a two-tier demo (Streamlit frontend + FastAPI backend) that helps pa
 
 ## Features
 
-- Streamlit frontend collects patient info and symptom descriptions.
-- FastAPI backend with Google ADK (Agent Development Kit) framework.
-- ADK agents use Gemini as the LLM brain with Firestore tools.
-- Backend service uses ADK agents to produce summaries and clarifying questions.
-- Firestore tools handle session storage operations.
-- Users can edit responses, generate an HTML/text prep sheet, and download a PDF.
-- Firestore session storage and GCS PDF uploads happen server-side only when the user consents.
+- **Streamlit frontend** collects patient info and symptom descriptions with a multi-step form
+- **FastAPI backend** with Google ADK framework integration
+- **Gemini 2.5 Flash** as the LLM brain for generating summaries and prep sheets
+- **ADK agent structure** for organized prompts and future tool integration
+- **Firestore integration** for session storage (when user consents)
+- **PDF generation** using wkhtmltopdf with download option
+- **GCS storage** for PDF uploads (optional, when bucket configured)
+- Users can edit responses, generate HTML/text prep sheets, and download PDFs
 
 ## Architecture
 
@@ -28,18 +29,29 @@ PrepMate is a two-tier demo (Streamlit frontend + FastAPI backend) that helps pa
          │
          ▼
 ┌─────────────────┐
-│  Google ADK     │
-│  Agents         │
+│  Gemini API     │
+│  (via ADK        │
+│   structure)     │
 ├─────────────────┤
-│  suggest_agent: │
-│  - Gemini 2.5   │
-│  - Tool:        │
-│    create_prep  │
+│  suggest_agent:  │
+│  - Instruction   │
+│    templates     │
+│  - Gemini 2.5    │
+│    Flash         │
 │                 │
-│  generate_agent:│
-│  - Gemini 2.5   │
-│  - Tool:        │
-│    update_prep  │
+│  generate_agent: │
+│  - Instruction   │
+│    templates     │
+│  - Gemini 2.5    │
+│    Flash         │
+└────────┬─────────┘
+         │
+         ▼
+┌─────────────────┐
+│  Firestore      │
+│  Tools          │
+│  - create_session│
+│  - update_session│
 └─────────────────┘
 ```
 
@@ -85,7 +97,10 @@ PrepMate/
     
     # Copy and configure environment variables
     cp .env.example .env
-    # Edit .env and add your GEMINI_API_KEY (or leave empty for mock mode)
+    # Edit .env and add:
+    # - GOOGLE_API_KEY or GEMINI_API_KEY (or leave empty for mock mode)
+    # - GOOGLE_APPLICATION_CREDENTIALS (path to service account JSON)
+    # - GCS_BUCKET_NAME (optional, for PDF storage)
     
     # Run the FastAPI server
     uvicorn app:app --reload --port 8080
@@ -109,34 +124,70 @@ PrepMate/
 - `backend/tools/db.py` and `backend/tools/storage.py` expect Google Cloud credentials; when unavailable they simply log warnings
 
 **Production Mode (Real Gemini API):**
-- Set `GOOGLE_API_KEY` in `.env` (ADK uses this) or `GEMINI_API_KEY`
-- Configure `GOOGLE_APPLICATION_CREDENTIALS` for Firestore and GCS
-- The Google ADK agents will use real Gemini API calls via `google-adk` framework
+- Set `GOOGLE_API_KEY` in `.env` (preferred) or `GEMINI_API_KEY`
+- Configure `GOOGLE_APPLICATION_CREDENTIALS` pointing to your service account JSON key
+- Set `GCS_BUCKET_NAME` if you want PDF uploads to Google Cloud Storage
+- The backend uses direct Gemini API calls with structured JSON output
 
 ## Deploying the backend to Cloud Run
 
 ### Prerequisites
 
-- Google Cloud project with billing
-- `gcloud` CLI authenticated
-- Firestore (Native mode) initialized
-- Optional GCS bucket for PDF uploads
+- Google Cloud project with billing enabled
+- `gcloud` CLI installed and authenticated
+- Firestore (Native mode) database created
+- Service account with Firestore permissions
+- Optional: GCS bucket for PDF uploads
 
 ### Build & deploy
 
 ```bash
 cd backend
+
+# Build the Docker image
 gcloud builds submit --tag gcr.io/PROJECT_ID/prepmate-backend
+
+# Deploy to Cloud Run
 gcloud run deploy prepmate-backend \
     --image gcr.io/PROJECT_ID/prepmate-backend \
     --platform managed \
-    --region REGION \
+    --region us-central1 \
     --allow-unauthenticated \
     --memory 1Gi \
-    --set-env-vars GCS_BUCKET_NAME=your-bucket
+    --timeout 300 \
+    --set-env-vars "GOOGLE_API_KEY=your-api-key,GCS_BUCKET_NAME=your-bucket-name" \
+    --set-secrets "GOOGLE_APPLICATION_CREDENTIALS=service-account-key:latest"
 ```
 
-Point the Streamlit frontend to the deployed backend with `BACKEND_URL=https://prepmate-backend-xyz.a.run.app`.
+**Note:** For production, use Secret Manager for API keys instead of env vars:
+```bash
+# Create secrets
+echo -n "your-api-key" | gcloud secrets create google-api-key --data-file=-
+echo -n "path/to/service-account.json" | gcloud secrets create service-account-path --data-file=-
+
+# Deploy with secrets
+gcloud run deploy prepmate-backend \
+    --set-secrets "GOOGLE_API_KEY=google-api-key:latest,GOOGLE_APPLICATION_CREDENTIALS=service-account-path:latest"
+```
+
+Point the Streamlit frontend to the deployed backend:
+```bash
+BACKEND_URL=https://prepmate-backend-xyz.a.run.app streamlit run app.py
+```
+
+## API Endpoints
+
+The FastAPI backend provides the following endpoints:
+
+- **`GET /health`** - Health check endpoint
+- **`POST /suggest`** - Generate symptom summary and follow-up questions
+  - Request: `{patient_info, symptom_description, language, consent, session_id?}`
+  - Response: `{session_id, summary, questions}`
+- **`POST /generate`** - Generate final prep sheet HTML/PDF
+  - Request: `{session_id, patient_info, summary, answers, language, consent}`
+  - Response: `{session_id, prep_sheet_html, prep_sheet_text, pdf_url?, pdf_base64?}`
+
+See `/docs` endpoint for interactive API documentation (Swagger UI).
 
 ## Firestore schema example
 

@@ -1,0 +1,42 @@
+# Git files
+.git
+.gitignore
+
+# Python cache
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# Environment variables (should be set via Cloud Run secrets)
+.env
+.env.local
+*.key.json
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Documentation
+*.md
+README.md
+
+# Test files
+test_*.py
+*_test.py
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
