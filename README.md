@@ -4,7 +4,7 @@ PrepMate is a two-tier demo (Streamlit frontend + FastAPI backend) that helps pa
 
 ## Features
 
-- **Streamlit frontend** collects patient info and symptom descriptions with a multi-step form
+- **Streamlit  frontend** collects patient info and symptom descriptions with a multi-step form
 - **FastAPI backend** with Google ADK framework integration
 - **Gemini 2.5 Flash** as the LLM brain for generating summaries and prep sheets
 - **ADK agent structure** for organized prompts and future tool integration
