@@ -1,24 +1,66 @@
 # PrepMate
 
-PrepMate is a two-tier demo (Streamlit frontend + Flask backend) that helps patients prepare for doctor visits by generating a personalized prep sheet.
+PrepMate is a two-tier demo (Streamlit frontend + FastAPI backend) that helps patients prepare for doctor visits by generating a personalized prep sheet.
 
 ## Features
 
 - Streamlit frontend collects patient info and symptom descriptions.
-- Backend service calls Gemini (mocked locally) to produce summaries and clarifying questions.
+- FastAPI backend with Google ADK (Agent Development Kit) framework.
+- ADK agents use Gemini as the LLM brain with Firestore tools.
+- Backend service uses ADK agents to produce summaries and clarifying questions.
+- Firestore tools handle session storage operations.
 - Users can edit responses, generate an HTML/text prep sheet, and download a PDF.
 - Firestore session storage and GCS PDF uploads happen server-side only when the user consents.
+
+## Architecture
+
+```
+┌─────────────────┐
+│   Streamlit     │
+│    Frontend     │
+└────────┬────────┘
+         │ HTTP Requests
+         ▼
+┌─────────────────┐
+│  FastAPI        │
+│  Backend        │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  Google ADK     │
+│  Agents         │
+├─────────────────┤
+│  suggest_agent: │
+│  - Gemini 2.5   │
+│  - Tool:        │
+│    create_prep  │
+│                 │
+│  generate_agent:│
+│  - Gemini 2.5   │
+│  - Tool:        │
+│    update_prep  │
+└─────────────────┘
+```
 
 ## Repository layout
 
 ```
 PrepMate/
-├── backend/        # Flask API + MCP toolbox (deploy to Cloud Run)
-│   ├── app.py
-│   ├── mcp/
+├── backend/        # FastAPI + Google ADK (deploy to Cloud Run)
+│   ├── app.py              # FastAPI REST API
+│   ├── agent.py            # Google ADK agents with Gemini
+│   ├── tools/
+│   │   ├── db.py           # Firestore helpers (ADK tools)
+│   │   ├── pdf.py          # PDF generation
+│   │   ├── storage.py      # GCS storage
+│   │   └── firestore_server.py  # (optional MCP server)
 │   ├── prompts/
+│   │   ├── suggest.txt     # Prompt for symptom analysis
+│   │   └── generate.txt    # Prompt for prep sheet generation
 │   ├── templates/
 │   ├── requirements.txt
+│   ├── .env.example
 │   └── Dockerfile
 └── frontend/       # Streamlit UI that calls backend APIs
     ├── app.py
@@ -38,9 +80,16 @@ PrepMate/
 
     ```bash
     cd backend
-    python -m venv venv && source venv/bin/activate
+    python -m venv venv && source venv/bin/activate  # On Windows: venv\Scripts\activate
     pip install -r requirements.txt
-    flask --app app run   # or python app.py
+    
+    # Copy and configure environment variables
+    cp .env.example .env
+    # Edit .env and add your GEMINI_API_KEY (or leave empty for mock mode)
+    
+    # Run the FastAPI server
+    uvicorn app:app --reload --port 8080
+    # or: python app.py
     ```
 
 3. **Run frontend**
@@ -52,10 +101,17 @@ PrepMate/
     BACKEND_URL=http://localhost:8080 streamlit run app.py
     ```
 
-## Mocked services
+## Development vs Production
 
-- `backend/mcp/llm.py` returns deterministic Gemini responses so you can validate the UI without API keys. Replace `call_gemini` with a Vertex AI call for production.
-- `backend/mcp/db.py` and `backend/mcp/storage.py` expect Google Cloud credentials; when unavailable they simply log warnings.
+**Development Mode (Mock Responses):**
+- Leave `GOOGLE_API_KEY` or `GEMINI_API_KEY` empty in `.env` to use mock responses
+- `backend/agent.py` returns deterministic responses so you can validate the UI without API keys
+- `backend/tools/db.py` and `backend/tools/storage.py` expect Google Cloud credentials; when unavailable they simply log warnings
+
+**Production Mode (Real Gemini API):**
+- Set `GOOGLE_API_KEY` in `.env` (ADK uses this) or `GEMINI_API_KEY`
+- Configure `GOOGLE_APPLICATION_CREDENTIALS` for Firestore and GCS
+- The Google ADK agents will use real Gemini API calls via `google-adk` framework
 
 ## Deploying the backend to Cloud Run
 
