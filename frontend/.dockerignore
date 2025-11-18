@@ -13,12 +13,6 @@ __pycache__
 venv/
 env/
 ENV/
-# Note: Keep 'env' file if it's needed (not a directory)
-
-# Environment variables (should be set via Cloud Run secrets)
-.env
-.env.local
-*.key.json
 
 # IDE files
 .vscode/
@@ -29,10 +23,6 @@ ENV/
 # Documentation
 *.md
 README.md
-
-# Test files
-test_*.py
-*_test.py
 
 # Logs
 *.log
