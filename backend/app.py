@@ -20,7 +20,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from agent import get_agent
-from mcp import db, pdf, storage
+from tools import db, pdf, storage
 
 # Load environment variables from .env file
 load_dotenv()

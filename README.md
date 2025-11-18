@@ -5,9 +5,10 @@ PrepMate is a two-tier demo (Streamlit frontend + FastAPI backend) that helps pa
 ## Features
 
 - Streamlit frontend collects patient info and symptom descriptions.
-- FastAPI backend with Google ADK Agent orchestration (Gemini brain + MCP tools).
-- Backend service calls Gemini to produce summaries and clarifying questions.
-- MCP Server handles Firestore operations for session storage.
+- FastAPI backend with Google ADK (Agent Development Kit) framework.
+- ADK agents use Gemini as the LLM brain with Firestore tools.
+- Backend service uses ADK agents to produce summaries and clarifying questions.
+- Firestore tools handle session storage operations.
 - Users can edit responses, generate an HTML/text prep sheet, and download a PDF.
 - Firestore session storage and GCS PDF uploads happen server-side only when the user consents.
 
@@ -27,15 +28,18 @@ PrepMate is a two-tier demo (Streamlit frontend + FastAPI backend) that helps pa
          │
          ▼
 ┌─────────────────┐
-│  ADK Agent      │
-│  Orchestrator   │
+│  Google ADK     │
+│  Agents         │
 ├─────────────────┤
-│  Brain:         │
-│  - Gemini API   │
+│  suggest_agent: │
+│  - Gemini 2.5   │
+│  - Tool:        │
+│    create_prep  │
 │                 │
-│  Tools:         │
-│  - MCP Server   │
-│    (Firestore)  │
+│  generate_agent:│
+│  - Gemini 2.5   │
+│  - Tool:        │
+│    update_prep  │
 └─────────────────┘
 ```
 
@@ -43,15 +47,14 @@ PrepMate is a two-tier demo (Streamlit frontend + FastAPI backend) that helps pa
 
 ```
 PrepMate/
-├── backend/        # FastAPI + ADK Agent + MCP (deploy to Cloud Run)
+├── backend/        # FastAPI + Google ADK (deploy to Cloud Run)
 │   ├── app.py              # FastAPI REST API
-│   ├── agent.py            # ADK Agent with Gemini
-│   ├── mcp/
-│   │   ├── firestore_server.py  # MCP Server for Firestore
-│   │   ├── db.py           # Firestore helpers
-│   │   ├── llm.py          # (legacy, now using agent.py)
+│   ├── agent.py            # Google ADK agents with Gemini
+│   ├── tools/
+│   │   ├── db.py           # Firestore helpers (ADK tools)
 │   │   ├── pdf.py          # PDF generation
-│   │   └── storage.py      # GCS storage
+│   │   ├── storage.py      # GCS storage
+│   │   └── firestore_server.py  # (optional MCP server)
 │   ├── prompts/
 │   │   ├── suggest.txt     # Prompt for symptom analysis
 │   │   └── generate.txt    # Prompt for prep sheet generation
@@ -101,14 +104,14 @@ PrepMate/
 ## Development vs Production
 
 **Development Mode (Mock Responses):**
-- Leave `GEMINI_API_KEY` empty in `.env` to use mock responses
+- Leave `GOOGLE_API_KEY` or `GEMINI_API_KEY` empty in `.env` to use mock responses
 - `backend/agent.py` returns deterministic responses so you can validate the UI without API keys
-- `backend/mcp/db.py` and `backend/mcp/storage.py` expect Google Cloud credentials; when unavailable they simply log warnings
+- `backend/tools/db.py` and `backend/tools/storage.py` expect Google Cloud credentials; when unavailable they simply log warnings
 
 **Production Mode (Real Gemini API):**
-- Set `GEMINI_API_KEY` in `.env` or as environment variable
+- Set `GOOGLE_API_KEY` in `.env` (ADK uses this) or `GEMINI_API_KEY`
 - Configure `GOOGLE_APPLICATION_CREDENTIALS` for Firestore and GCS
-- The ADK Agent will use real Gemini API calls via `google-genai` package
+- The Google ADK agents will use real Gemini API calls via `google-adk` framework
 
 ## Deploying the backend to Cloud Run
 
