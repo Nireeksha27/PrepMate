@@ -14,9 +14,10 @@ from datetime import datetime
 from typing import Optional
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
 from pydantic import BaseModel, Field
 
 from agent import get_agent
@@ -50,6 +51,29 @@ GCS_BUCKET = os.environ.get("GCS_BUCKET_NAME")
 
 # Get agent instance
 agent = get_agent()
+
+
+# Exception handler for validation errors
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Handle Pydantic validation errors with detailed messages."""
+    errors = exc.errors()
+    error_details = []
+    for error in errors:
+        error_details.append({
+            "field": " -> ".join(str(loc) for loc in error["loc"]),
+            "message": error["msg"],
+            "type": error["type"]
+        })
+    logger.error(f"Validation error: {error_details}")
+    return JSONResponse(
+        status_code=422,
+        content={
+            "detail": "Validation error",
+            "errors": error_details,
+            "body": str(exc.body) if hasattr(exc, 'body') else "N/A"
+        }
+    )
 
 
 # Pydantic models for request/response
@@ -173,9 +197,16 @@ async def generate_prep_sheet(request: GenerateRequest):
     4. Optionally uploads to GCS and updates Firestore via MCP
     """
     
+    # Log incoming request for debugging
+    logger.info(f"Generate request received: session_id={request.session_id}, answers_count={len(request.answers)}")
+    
     # Validate inputs
     if not request.summary.strip():
         raise HTTPException(status_code=400, detail="summary is required")
+    
+    # Validate answers
+    if not request.answers:
+        raise HTTPException(status_code=400, detail="answers list cannot be empty")
     
     try:
         # Call ADK Agent to generate prep sheet

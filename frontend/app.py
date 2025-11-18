@@ -162,7 +162,7 @@ def step_patient_info():
         # Optional: Display a success message for patient info
         st.success("Patient information saved successfully! Proceed to symptom description.")
         st.session_state.step = 2
-        st.experimental_rerun()
+        st.rerun()
 
 
 def step_symptom_input():
@@ -196,7 +196,7 @@ def step_symptom_input():
         st.session_state.answers = {}
         st.session_state.language = language
         st.session_state.step = 3
-        st.experimental_rerun()
+        st.rerun()
 
 
 def step_followups():
@@ -251,21 +251,25 @@ def step_followups():
                 st.success("Answers saved. Generating your prep sheet...")
 
                 # Prepare answers in the format expected by the backend
-                formatted_answers = [
-                    {
-                        "id": q.get("id") or q.get("label"),
-                        "label": q.get("label", "Question"),
-                        "answer": answered_questions.get(q.get("id") or q.get("label"), ""),
-                    }
-                    for q in st.session_state.questions
-                ]
+                formatted_answers = []
+                for q in st.session_state.questions:
+                    qid = q.get("id") or q.get("label") or f"q_{st.session_state.questions.index(q)}"
+                    label = q.get("label", "Question")
+                    answer = answered_questions.get(qid, "")
+                    # Ensure all required fields are present and non-empty
+                    if qid and label:
+                        formatted_answers.append({
+                            "id": str(qid),
+                            "label": str(label),
+                            "answer": str(answer) if answer else ""  # Convert to string, allow empty
+                        })
 
                 payload = {
                     "session_id": st.session_state.session_id,
                     "patient_info": st.session_state.patient_info,
                     "summary": st.session_state.summary,
                     "answers": formatted_answers, # Use the formatted answers
-                    "language": st.session_state.language,
+                    "language": st.session_state.get("language", "en"),  # Default to "en" if not set
                     "consent": st.session_state.consent,
                 }
                 try:
@@ -279,11 +283,11 @@ def step_followups():
                 st.session_state.prep_sheet_text = data.get("prep_sheet_text", "")
                 st.session_state.pdf_base64 = data.get("pdf_base64", "")
                 st.session_state.step = 4
-                st.experimental_rerun()
+                st.rerun()
 
     if st.button("Back to Symptom Description ◀️"):
         st.session_state.step = 2
-        st.experimental_rerun()
+        st.rerun()
 
 
 def step_prep_sheet():
@@ -303,19 +307,25 @@ def step_prep_sheet():
             height=200,
         )
 
-    if st.session_state.pdf_base64:
-        pdf_bytes = base64.b64decode(st.session_state.pdf_base64)
-        st.download_button(
-            "Download PDF ⬇️",
-            data=pdf_bytes,
-            file_name=f"prep_{st.session_state.session_id}.pdf",
-            mime="application/pdf",
-        )
-
     if st.button("Start over 🔄"):
         for key in list(st.session_state.keys()):
             del st.session_state[key]
-        st.experimental_rerun()
+        st.rerun()
+    
+    st.write("---")
+    
+    # Download PDF button at the end
+    if st.session_state.pdf_base64:
+        pdf_bytes = base64.b64decode(st.session_state.pdf_base64)
+        st.download_button(
+            "📥 Download PDF",
+            data=pdf_bytes,
+            file_name=f"prep_{st.session_state.session_id}.pdf",
+            mime="application/pdf",
+            use_container_width=True,
+        )
+    else:
+        st.info("PDF generation is in progress or unavailable. Please try again.")
 
 
 if __name__ == "__main__":
