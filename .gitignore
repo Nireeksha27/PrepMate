@@ -1,0 +1,35 @@
+# Environment variables
+.env
+backend/.env
+
+# Service account keys (NEVER commit these!)
+*.json
+!package.json
+!package-lock.json
+backend/prepmatebackend-key.json
+**/prepmatebackend-key.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test outputs
+test_output.html
+*.log
+

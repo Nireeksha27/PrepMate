@@ -1,0 +1,17 @@
+# Service account keys - NEVER commit these!
+prepmatebackend-key.json
+*-key.json
+*.json
+!package.json
+
+# Environment variables
+.env
+
+# Test outputs
+test_output.html
+*.log
+
+# Python cache
+__pycache__/
+*.pyc
+

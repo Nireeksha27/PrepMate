@@ -1,0 +1,14 @@
+fastapi
+uvicorn[standard]
+pydantic
+jinja2
+pdfkit
+google-cloud-firestore
+google-cloud-storage
+google-cloud-aiplatform
+google-generativeai
+google-adk
+python-dotenv
+requests
+
+

@@ -1,0 +1,6 @@
+# Gemini API Configuration
+GEMINI_API_KEY=AIzaSyDFvZO1Ff1DhQBqiWve-MEKy8kFdn_4j_4
+
+# Google Cloud Configuration
+GOOGLE_APPLICATION_CREDENTIALS=E:\PrepMate\backend\prepmatebackend-key.json
+GCS_BUCKET_NAME=
